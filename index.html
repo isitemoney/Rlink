@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم | Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- واجهة تسجيل الدخول -->
+    <div id="login-container" class="container">
+        <div class="logo">🔐</div>
+        <h2>تسجيل الدخول</h2>
+        <p>الرجاء إدخال البيانات التي استلمتها من المدير</p>
+        <input type="text" id="username" placeholder="اسم المستخدم">
+        <input type="password" id="password" placeholder="كلمة المرور">
+        <button onclick="login()">دخول إلى الحساب</button>
+        <p id="error-msg" class="error">خطأ في اسم المستخدم أو كلمة المرور!</p>
+    </div>
+
+    <!-- واجهة الداشبورد -->
+    <div id="dashboard-container" class="container dashboard" style="display: none;">
+        <div class="header">
+            <h3>أهلاً بك، <span id="user-display"></span> ✨</h3>
+            <button class="logout-btn" onclick="logout()">خروج</button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="card">
+                <span class="icon">🖱️</span>
+                <h4>عدد الضغطات</h4>
+                <p id="clicks">0</p>
+            </div>
+            
+            <div class="card">
+                <span class="icon">💰</span>
+                <h4>الأرباح</h4>
+                <p id="earnings">$0.00</p>
+            </div>
+        </div>
+
+        <div class="user-info">
+            <p>حالة الحساب: <span style="color: #27ae60;">نشط</span></p>
+        </div>
+    </div>
+
+    <!-- مكتبات Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
