@@ -3,51 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم | Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Daring Money | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background: #050b1a; color: #e2e8f0; margin: 0; }
+        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); transition: all 0.2s; }
+        input, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
+    </style>
 </head>
 <body>
 
-    <!-- واجهة تسجيل الدخول -->
-    <div id="login-container" class="container">
-        <div class="logo">🔐</div>
-        <h2>تسجيل الدخول</h2>
-        <p>الرجاء إدخال البيانات التي استلمتها من المدير</p>
-        <input type="text" id="username" placeholder="اسم المستخدم">
-        <input type="password" id="password" placeholder="كلمة المرور">
-        <button onclick="login()">دخول إلى الحساب</button>
-        <p id="error-msg" class="error">خطأ في اسم المستخدم أو كلمة المرور!</p>
+<nav id="nav" class="hidden glass-card sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-white/5">
+    <div class="flex flex-col text-right">
+        <h1 class="text-xl font-black italic">DARING <span class="text-blue-500">MONEY</span></h1>
+        <p id="welcome-msg" class="text-[10px] text-slate-400 font-bold italic"></p>
     </div>
+    <div class="flex gap-2">
+        <a href="https://t.me/eruuiyl" target="_blank" class="bg-blue-500/20 text-blue-400 px-3 py-2 rounded-xl text-[10px] font-bold border border-blue-500/30">الدعم الفني</a>
+        <button onclick="logout()" class="bg-red-500/20 text-red-400 px-4 py-2 rounded-xl text-xs font-black">خروج</button>
+    </div>
+</nav>
 
-    <!-- واجهة الداشبورد -->
-    <div id="dashboard-container" class="container dashboard" style="display: none;">
-        <div class="header">
-            <h3>أهلاً بك، <span id="user-display"></span> ✨</h3>
-            <button class="logout-btn" onclick="logout()">خروج</button>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="card">
-                <span class="icon">🖱️</span>
-                <h4>عدد الضغطات</h4>
-                <p id="clicks">0</p>
-            </div>
-            
-            <div class="card">
-                <span class="icon">💰</span>
-                <h4>الأرباح</h4>
-                <p id="earnings">$0.00</p>
-            </div>
-        </div>
+<div id="loading-screen" class="hidden fixed inset-0 z-[100] bg-[#050b1a] flex flex-col items-center justify-center text-center p-6">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500 mb-4"></div>
+    <p class="text-blue-400 font-bold">جاري تحويلك للرابط الحصري...</p>
+</div>
 
-        <div class="user-info">
-            <p>حالة الحساب: <span style="color: #27ae60;">نشط</span></p>
+<div id="auth-section" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-t-4 border-blue-500 shadow-2xl text-center">
+        <h2 class="text-3xl font-black mb-8 italic">DARING <span class="text-blue-500">MONEY</span></h2>
+        <div class="space-y-4">
+            <input type="text" id="username" placeholder="اسم المستخدم (بالإنكليزية)" class="hidden w-full p-4 rounded-2xl outline-none text-right font-bold">
+            <input type="email" id="email" placeholder="البريد الإلكتروني" class="w-full p-4 rounded-2xl outline-none text-left">
+            <input type="password" id="password" placeholder="كلمة المرور" class="w-full p-4 rounded-2xl outline-none text-left">
+            <button onclick="handleAuth()" id="auth-btn" class="btn-primary w-full py-4 rounded-2xl font-black text-lg">دخول</button>
+            <p onclick="toggleAuthMode()" id="auth-switch" class="text-xs text-slate-500 underline cursor-pointer">إنشاء حساب جديد</p>
         </div>
     </div>
+</div>
 
-    <!-- مكتبات Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="script.js"></script>
+<div id="dashboard-section" class="hidden max-w-5xl mx-auto p-4 space-y-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
+        <div class="glass-card p-4 rounded-2xl border-b-2 border-blue-500">
+            <p class="text-blue-400 text-[10px] font-black italic uppercase">أرباح اليوم</p>
+            <h3 id="stat-today" class="num-font text-2xl tracking-tighter">$0.00</h3>
+        </div>
+        <div class="glass-card p-4 rounded-2xl shadow-lg">
+            <p class="text-slate-400 text-[10px] font-black italic uppercase">إجمالي الأرباح</p>
+            <h3 id="stat-total" class="num-font text-2xl tracking-tighter">$0.00</h3>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border-b-2 border-emerald-500 shadow-lg">
+            <p class="text-emerald-400 text-[10px] font-black underline italic uppercase">القابل للسحب</p>
+            <h3 id="stat-withdrawable" class="num-font text-2xl text-emerald-400 tracking-tighter">$0.00</h3>
+        </div>
+        <div class="glass-card p-4 rounded-2xl shadow-lg">
+            <p class="text-purple-400 text-[10px] font-black italic uppercase">النقرات</p>
+            <h3 id="stat-clicks" class="num-font text-2xl">0</h3>
+        </div>
+    </div>
+
+    <div class="glass-card p-6 rounded-[2rem] border-r-4 border-blue-500 shadow-xl">
+        <h4 class="font-bold text-xs text-blue-400 mb-4 italic uppercase tracking-widest">🔗 رابطك التسويقي الحصري</h4>
+        <div class="flex gap-2 bg-slate-950 p-1 rounded-2xl border border-white/5">
+            <input id="ref-link" readonly class="w-full bg-transparent p-3 text-[10px] outline-none text-blue-300 font-bold">
+            <button onclick="copyReferralLink()" class="btn-primary px-6 rounded-xl font-black text-xs text-white">نسخ</button>
+        </div>
+    </div>
+
+    <div class="glass-card p-6 rounded-[2rem] border-r-4 border-emerald-500 shadow-xl">
+        <h4 class="font-bold text-sm text-emerald-400 mb-6 italic uppercase">💰 طلب سحب جديد</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select id="w-method" class="p-4 rounded-2xl text-xs font-bold outline-none">
+                <option value="زين كاش">زين كاش</option>
+                <option value="رصيد آسيا">رصيد آسيا</option>
+                <option value="USDT">USDT (TRC20)</option>
+            </select>
+            <input type="text" id="w-account" placeholder="رقم الحساب أو المحفظة" class="p-4 rounded-2xl text-xs text-right font-bold outline-none">
+            <input type="number" id="w-amount" placeholder="المبلغ (الأدنى 7$)" class="p-4 rounded-2xl text-xs text-right font-bold outline-none">
+            <input type="text" id="w-contact" placeholder="يوزر التليجرام الخاص بك" class="p-4 rounded-2xl text-xs text-right font-bold outline-none">
+        </div>
+        <button onclick="confirmWithdraw()" class="btn-primary w-full py-4 mt-4 rounded-2xl font-black text-white shadow-lg">تأكيد السحب</button>
+    </div>
+
+    <div class="glass-card p-6 rounded-[2rem] shadow-xl">
+        <h4 class="text-[10px] font-black mb-4 text-slate-500 italic uppercase tracking-widest">📋 سجل السحوبات المباشر</h4>
+        <div id="user-withdraw-history" class="space-y-3 min-h-[100px]"></div>
+    </div>
+</div>
+
+<div id="admin-panel" class="hidden max-w-5xl mx-auto p-4 py-10 border-t border-red-500/20 space-y-6">
+    <div class="glass-card p-6 rounded-[2rem] border border-blue-500/30">
+        <h2 class="text-xl font-black text-blue-400 mb-4 italic italic uppercase">إدارة الروابط والتحويل</h2>
+        <div class="flex flex-col gap-4">
+            <p class="text-xs text-slate-400 font-bold">الرابط الحالي الذي يتم تحويل الزوار إليه:</p>
+            <div class="flex gap-2">
+                <input type="text" id="admin-new-link" placeholder="ضع الرابط الجديد هنا..." class="w-full p-4 rounded-2xl text-xs font-bold outline-none">
+                <button onclick="updateGlobalLink()" class="btn-primary px-6 rounded-2xl font-black text-xs">تحديث</button>
+            </div>
+            <p id="current-link-display" class="text-[10px] text-emerald-400 font-mono"></p>
+        </div>
+    </div>
+
+    <div class="glass-card p-6 rounded-[2rem] border border-red-500/30">
+        <h2 class="text-xl font-black text-red-500 mb-6 italic uppercase underline tracking-tighter">طلبات السحب المعلقة</h2>
+        <div id="admin-withdrawals" class="space-y-4"></div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyCnkJf-6sAeRJpm34yXLmklLwSxM-GJvUc",
+    authDomain: "my-dash-c78e3.firebaseapp.com",
+    databaseURL: "https://my-dash-c78e3-default-rtdb.firebaseio.com",
+    projectId: "my-dash-c78e3",
+    storageBucket: "my-dash-c78e3.firebasestorage.app",
+    messagingSenderId: "137154835768",
+    appId: "1:137154835768:web:7f396782de1300f9bdfdcd"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+const ADMIN_EMAILS = ["xxetali46@gmail.com", "xxetali47@gmail.com"];
+const CLICK_COMMISSION = 0.02;
+
+// جلب الرابط العالمي من قاعدة البيانات أو استخدام افتراضي
+let GLOBAL_REDIRECT_LINK = "https://hp.funroom.store/a/8nw6emt2";
+db.ref('settings/redirectLink').on('value', snap => {
+    if (snap.val()) {
+        GLOBAL_REDIRECT_LINK = snap.val();
+        const display = document.getElementById('current-link-display');
+        if(display) display.innerText = "الرابط النشط: " + GLOBAL_REDIRECT_LINK;
+    }
+});
+
+function updateGlobalLink() {
+    const newLink = document.getElementById('admin-new-link').value.trim();
+    if (!newLink.startsWith('http')) return showNotification("يرجى إدخال رابط صحيح يبدأ بـ http", "blue");
+    db.ref('settings').update({ redirectLink: newLink })
+        .then(() => {
+            showNotification("تم تحديث رابط التحويل بنجاح ✅", "green");
+            document.getElementById('admin-new-link').value = "";
+        });
+}
+
+function checkAndRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const refId = params.get("ref");
+    if (refId) {
+        document.getElementById('loading-screen').classList.remove('hidden');
+        const vKey = "v_" + refId;
+        if (localStorage.getItem(vKey)) {
+            window.location.href = GLOBAL_REDIRECT_LINK;
+            return;
+        }
+        db.ref('users/' + refId).transaction(d => {
+            if (d) {
+                d.clicks = (d.clicks || 0) + 1;
+                d.todayBalance = Number(((d.todayBalance || 0) + CLICK_COMMISSION).toFixed(2));
+                d.totalBalance = Number(((d.totalBalance || 0) + CLICK_COMMISSION).toFixed(2));
+            }
+            return d;
+        }).then(() => {
+            localStorage.setItem(vKey, "true");
+            window.location.href = GLOBAL_REDIRECT_LINK;
+        }).catch(() => { window.location.href = GLOBAL_REDIRECT_LINK; });
+    }
+}
+
+function showNotification(msg, type = "blue") {
+    const div = document.createElement("div");
+    div.className = `fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] px-6 py-4 rounded-2xl text-white font-black text-sm shadow-2xl bg-${type === 'green' ? 'emerald' : 'blue'}-600`;
+    div.innerText = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+}
+
+function checkDailyReset(uid, data) {
+    const now = new Date();
+    let resetTime = new Date();
+    resetTime.setHours(3, 0, 0, 0);
+    if (now.getHours() < 3) resetTime.setDate(resetTime.getDate() - 1);
+    const lastReset = data.lastResetDay || "";
+    const todayStr = resetTime.toDateString();
+    if (lastReset !== todayStr) {
+        const profitToMove = data.todayBalance || 0;
+        db.ref('users/' + uid).update({
+            todayBalance: 0,
+            withdrawableBalance: Number(((data.withdrawableBalance || 0) + profitToMove).toFixed(2)),
+            lastResetDay: todayStr
+        });
+    }
+}
+
+auth.onAuthStateChanged(u => {
+    if (u) {
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+        document.getElementById('nav').classList.remove('hidden');
+        db.ref('users/' + u.uid).on('value', snap => {
+            const d = snap.val(); if (!d) return;
+            checkDailyReset(u.uid, d);
+            document.getElementById('welcome-msg').innerText = `أهلاً بك، ${d.username || 'مروجنا'} ✨`;
+            document.getElementById('stat-today').innerText = `$${(d.todayBalance||0).toFixed(2)}`;
+            document.getElementById('stat-total').innerText = `$${(d.totalBalance||0).toFixed(2)}`;
+            document.getElementById('stat-withdrawable').innerText = `$${(d.withdrawableBalance||0).toFixed(2)}`;
+            document.getElementById('stat-clicks').innerText = d.clicks || 0;
+            document.getElementById('ref-link').value = window.location.origin + window.location.pathname + "?ref=" + u.uid;
+        });
+        renderHistory(u.uid);
+        if (ADMIN_EMAILS.includes(u.email)) {
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminPanel();
+        }
+    } else {
+        document.getElementById('auth-section').classList.remove('hidden');
+        document.getElementById('dashboard-section').classList.add('hidden');
+        document.getElementById('nav').classList.add('hidden');
+    }
+});
+
+let isLoginMode = true;
+async function handleAuth() {
+    const e = document.getElementById('email').value, p = document.getElementById('password').value, n = document.getElementById('username').value;
+    try {
+        if (isLoginMode) await auth.signInWithEmailAndPassword(e, p);
+        else {
+            const r = await auth.createUserWithEmailAndPassword(e, p);
+            await db.ref('users/' + r.user.uid).set({
+                username: n, email: e, clicks: 0, todayBalance: 0, totalBalance: 0, withdrawableBalance: 0, lastResetDay: ""
+            });
+        }
+    } catch (err) { showNotification(err.message, "blue"); }
+}
+
+function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('username').classList.toggle('hidden', isLoginMode);
+    document.getElementById('auth-btn').innerText = isLoginMode ? "دخول" : "إنشاء حساب";
+    document.getElementById('auth-switch').innerText = isLoginMode ? "إنشاء حساب جديد" : "لديك حساب؟ سجل دخول";
+}
+
+function renderHistory(uid) {
+    db.ref('withdrawals').on('value', snap => {
+        const list = document.getElementById('user-withdraw-history');
+        const data = snap.val(); list.innerHTML = "";
+        if (!data) return;
+        const myWithdraws = Object.keys(data).reverse().map(k => ({ id: k, ...data[k] })).filter(w => w.uid === uid);
+        myWithdraws.forEach(w => {
+            const isPaid = w.status === "paid";
+            list.innerHTML += `<div class="glass-card p-4 rounded-2xl flex justify-between items-center border border-white/5"><div class="text-right"><p class="text-lg text-white font-black">$${w.amount}</p><p class="text-[9px] text-slate-500 font-bold italic lowercase">${w.method}</p></div><div class="text-[10px] font-black ${isPaid?'text-emerald-400':'text-amber-400'}">${isPaid?'تم الدفع ✅':'قيد المراجعة'}</div></div>`;
+        });
+    });
+}
+
+function confirmWithdraw() {
+    const amt = parseFloat(document.getElementById('w-amount').value);
+    const acc = document.getElementById('w-account').value.trim();
+    const con = document.getElementById('w-contact').value.trim();
+    const met = document.getElementById('w-method').value;
+    if (!amt || amt < 7) return showNotification("الحد الأدنى للسحب 7$", "blue");
+    const uRef = db.ref('users/' + auth.currentUser.uid);
+    uRef.once('value', snap => {
+        const balance = snap.val().withdrawableBalance || 0;
+        if (amt > balance) return showNotification("رصيدك غير كافٍ", "blue");
+        uRef.update({ withdrawableBalance: Number((balance - amt).toFixed(2)) });
+        db.ref('withdrawals').push({ uid: auth.currentUser.uid, username: snap.val().username, amount: amt, method: met, account: acc, contact: con, status: "pending", timestamp: Date.now() })
+            .then(() => { showNotification("تم طلب السحب بنجاح! ✅", "green"); document.getElementById('w-amount').value = ""; });
+    });
+}
+
+function loadAdminPanel() {
+    db.ref('withdrawals').on('value', snap => {
+        const container = document.getElementById('admin-withdrawals'); container.innerHTML = "";
+        const data = snap.val(); if (!data) return;
+        Object.keys(data).reverse().forEach(key => {
+            const w = data[key]; if (w.status === "paid") return;
+            container.innerHTML += `
+                <div class="glass-card p-4 rounded-2xl flex justify-between items-center border-r-4 border-amber-500">
+                    <div class="text-right"><h4 class="font-black text-white">${w.username}</h4><p class="text-xs text-amber-400 font-bold">$${w.amount}</p>
+                    <p class="text-[10px] text-slate-500 uppercase">${w.method} - ${w.account} | ${w.contact}</p></div>
+                    <button onclick="markAsPaid('${key}')" class="bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow-lg">إتمام</button>
+                </div>`;
+        });
+    });
+}
+
+function markAsPaid(id) { db.ref('withdrawals/'+id).update({status:"paid"}); }
+function copyReferralLink() { const copyText = document.getElementById("ref-link"); copyText.select(); document.execCommand("copy"); showNotification("تم نسخ الرابط ✅", "green"); }
+function logout() { auth.signOut(); }
+
+checkAndRedirect();
+</script>
 </body>
 </html>
